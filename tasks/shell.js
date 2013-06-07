@@ -49,34 +49,41 @@ module.exports = function( grunt ) {
         }
          
         var proc = cp.spawn(file, args, opts );
+        
+        if(proc.stdout !== null){
+            proc.stdout.setEncoding('utf8');
+        }
+        if(proc.stderr !== null){
+            proc.stderr.setEncoding('utf8');
+        }
 
-        proc.stdout.setEncoding('utf8');
-        proc.stderr.setEncoding('utf8');
+        if(proc.stdout !== null){
+            proc.stdout.on('data', function(data) {
+                if (stdBuffering) {
+                    stdOutPos += stdOutBuf.write(data, stdOutPos);
+                }
 
-        proc.stdout.on('data', function(data) {
-            if (stdBuffering) {
-                stdOutPos += stdOutBuf.write(data, stdOutPos);
-            }
+                if( _.isFunction( options.stdout ) ) {
+                    options.stdout(data);
+                } else if(options.stdout === true || grunt.option('verbose')) {
+                    log.write(data);
+                }
+            });
+        }
+        
+        if(proc.stderr !== null){
+            proc.stderr.on('data', function(data) {
+                if (stdBuffering) {
+                    stdErrPos += stdErrBuf.write(data, stdErrPos);
+                }
 
-            if( _.isFunction( options.stdout ) ) {
-                options.stdout(data);
-            } else if(options.stdout === true || grunt.option('verbose')) {
-                log.write(data);
-            }
-        });
-
-        proc.stderr.on('data', function(data) {
-            if (stdBuffering) {
-                stdErrPos += stdErrBuf.write(data, stdErrPos);
-            }
-
-            if( _.isFunction( options.stderr ) ) {
-                options.stderr(data);
-            } else if(options.stderr === true || grunt.option('verbose')) {
-                log.error(data);
-            }
-        });
-
+                if( _.isFunction( options.stderr ) ) {
+                    options.stderr(data);
+                } else if(options.stderr === true || grunt.option('verbose')) {
+                    log.error(data);
+                }
+            });
+        }
 
         proc.on('close', function (code) {
             if ( _.isFunction( options.callback ) ) {
